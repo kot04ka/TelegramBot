@@ -7,6 +7,9 @@ import schedule
 import time
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
+import random
+from advice_lists import advice_start, advice_action, advice_end
+
 
 #Token бота 
 bot = telebot.TeleBot('6166430773:AAHqpvwfB2eY7nJXUa4EdZ8kNDkr9zFrP8I')
@@ -232,9 +235,6 @@ def yesno_question_4(message):
 
 
 
-
-
-
 #Трекер 
 reminders = {}
 
@@ -251,12 +251,12 @@ def set_reminder(chat_id, text, datetime_str, interval):
         bot.send_message(chat_id, 'Invalid datetime format. Use YYYY-MM-DD HH:MM.')
         return
 
-    if interval == 'once':  # one-time reminder
+    if interval == '9':  # one-time reminder
         scheduler.add_job(send_reminder, 'date', run_date=remind_datetime, args=[chat_id, text])
-    elif interval.isdigit() and int(interval) >= 1:  # recurring reminder
+    elif isinstance(interval, int) and interval >= 1:  # recurring reminder
         scheduler.add_job(send_reminder, 'interval', days=int(interval), start_date=remind_datetime, args=[chat_id, text])
     else:
-        bot.send_message(chat_id, 'Invalid interval. Use "once" for one-time reminders and 1 or more for recurring reminders.')
+        bot.send_message(chat_id, 'Invalid interval. Use "9" for one-time reminders and 1 or more for recurring reminders.')
         return
 
 @bot.message_handler(commands=['remind'])
@@ -279,6 +279,26 @@ def handle_remind(message):
 
     set_reminder(chat_id, text, datetime_str, interval)
     bot.reply_to(message, 'Reminder set!')
+
+
+
+
+
+
+#Советы по сну 
+def get_sleep_tip():
+    advice = random.choice(advice_start) + ' ' + random.choice(advice_action) + ' ' + random.choice(advice_end)
+    return advice
+
+# Обработчик команды для получения совета по сну
+@bot.message_handler(commands=['sleep_tip'])
+def handle_sleep_tip(message):
+    chat_id = message.chat.id
+    sleep_tip = get_sleep_tip()
+    bot.send_message(chat_id, sleep_tip)
+
+
+
 
 
 

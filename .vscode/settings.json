@@ -17,5 +17,8 @@
             "connectionTimeout": 0,
             "askForPassword": true
         }
-    ]
+    ],
+    "[python]": {
+        "editor.defaultFormatter": null
+    }
 }
