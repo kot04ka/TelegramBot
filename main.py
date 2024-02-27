@@ -6,10 +6,11 @@ import threading
 import schedule
 import time
 from datetime import datetime, timedelta
+from dateutil.parser import parse
 from apscheduler.schedulers.background import BackgroundScheduler
 import random
 from advice_lists import advice_start, advice_action, advice_end
-
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 #Token бота 
 bot = telebot.TeleBot('6166430773:AAHqpvwfB2eY7nJXUa4EdZ8kNDkr9zFrP8I')
@@ -234,52 +235,60 @@ def yesno_question_4(message):
 
 
 
-
-#Трекер 
+# Трекер напоминаний
 reminders = {}
 
+# Создаем планировщик заданий, который будет управлять напоминаниями
 scheduler = BackgroundScheduler()
 scheduler.start()
 
+# Функция для отправки напоминания
 def send_reminder(chat_id, text):
     bot.send_message(chat_id, text)
 
+# Функция для установки напоминания
 def set_reminder(chat_id, text, datetime_str, interval):
+    # Преобразуем строку даты и времени в объект datetime
     try:
-        remind_datetime = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M')
+        remind_datetime = parse(datetime_str)
     except ValueError:
-        bot.send_message(chat_id, 'Invalid datetime format. Use YYYY-MM-DD HH:MM.')
+        bot.send_message(chat_id, 'Неверный формат времени даты. Используйте YYYY-MM-DD HH:MM.')
         return
 
-    if interval == '9':  # one-time reminder
+    # Преобразуем интервал в число
+    try:
+        interval = int(interval)
+    except ValueError:
+        bot.send_message(chat_id, 'Интервал должен быть числом.')
+        return
+
+    # Устанавливаем напоминание в планировщике заданий
+    if interval in [1, 2]:  # одноразовое напоминание
         scheduler.add_job(send_reminder, 'date', run_date=remind_datetime, args=[chat_id, text])
-    elif isinstance(interval, int) and interval >= 1:  # recurring reminder
-        scheduler.add_job(send_reminder, 'interval', days=int(interval), start_date=remind_datetime, args=[chat_id, text])
+    elif interval > 2:  # повторяющееся напоминание
+        scheduler.add_job(send_reminder, 'interval', days=interval, start_date=remind_datetime, args=[chat_id, text])
     else:
-        bot.send_message(chat_id, 'Invalid interval. Use "9" for one-time reminders and 1 or more for recurring reminders.')
-        return
+        bot.send_message(chat_id, 'Неверный интервал. Используйте "1" или "2" для одноразовых напоминаний и числа больше 2 для повторяющихся напоминаний.')
 
+# Обработчик команды /remind
 @bot.message_handler(commands=['remind'])
 def handle_remind(message):
     chat_id = message.chat.id
     parts = message.text.split()
 
+    # Проверяем, что команда введена правильно
     if len(parts) < 4:
-        bot.reply_to(message, 'Invalid command format. Use: /remind [text] [datetime] [interval]')
+        bot.reply_to(message, 'Неверный формат команды. Используйте: /remind [текст напоминания] [дата и время] [интервал]')
         return
 
+    # Извлекаем текст напоминания, дату и время, и интервал из команды
     text = ' '.join(parts[1:-3])
     datetime_str = ' '.join(parts[-3:-1])
+    interval = parts[-1]
 
-    try:
-        interval = int(parts[-1])
-    except ValueError:
-        bot.reply_to(message, 'Interval must be a number.')
-        return
-
+    # Устанавливаем напоминание
     set_reminder(chat_id, text, datetime_str, interval)
-    bot.reply_to(message, 'Reminder set!')
-
+    bot.reply_to(message, 'Напоминание установлено!')
 
 
 
@@ -296,6 +305,14 @@ def handle_sleep_tip(message):
     chat_id = message.chat.id
     sleep_tip = get_sleep_tip()
     bot.send_message(chat_id, sleep_tip)
+
+
+
+#Кнопки
+
+
+
+
 
 
 

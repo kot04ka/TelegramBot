@@ -1,23 +1,5 @@
 {
-    "sqltools.connections": [
-        {
-            "mysqlOptions": {
-                "authProtocol": "default",
-                "enableSsl": "Disabled",
-                "ssl": {}
-            },
-            "previewLimit": 50,
-            "server": "localhost",
-            "port": 3306,
-            "driver": "MySQL",
-            "name": "Users",
-            "group": "Users",
-            "database": "Users",
-            "username": "Users",
-            "connectionTimeout": 0,
-            "askForPassword": true
-        }
-    ],
+    "sqltools.connections": [],
     "[python]": {
         "editor.defaultFormatter": null
     }
