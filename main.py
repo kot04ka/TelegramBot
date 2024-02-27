@@ -5,6 +5,7 @@ from threading import Timer
 import threading
 import schedule
 import time
+
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -66,6 +67,8 @@ def start_test(message):
 # Обработчик команды для прохождения теста на уровень тревожности
 @bot.message_handler(commands=['test-1'])
 def start_anxiety_test(message):
+    # Создаем словарь для данного пользователя
+    user_data[message.from_user.id] = {}
     bot.reply_to(message, "Давайте проверим ваш уровень тревожности. Пожалуйста, ответьте на следующие вопросы числами от 1 до 5, где 1 - совсем не так, а 5 - очень сильно.")
     bot.send_message(message.chat.id, "1. Чувствуете ли вы постоянное беспокойство и нервозность?")
     bot.register_next_step_handler(message, question_2)
@@ -75,6 +78,9 @@ def question_2(message):
         response = int(message.text)
         if response < 1 or response > 5:
             raise ValueError
+
+        # Сохраняем ответ пользователя
+        user_data[message.from_user.id]['Вопрос 1'] = response
 
         # Connect to the database
         db = mysql.connector.connect(
@@ -94,9 +100,15 @@ def question_2(message):
         else:
             fullname, phone_number = "Unknown", "Unknown"
 
+        # Преобразуем словарь с ответами пользователя в строку
+        answers = str(user_data[message.from_user.id])
+
+        # Получаем текущую дату и время
+        test_date = datetime.now()
+
         # Insert the data into the testresults table
-        query = "INSERT INTO testresults (fullname, phone_number, answers) VALUES (%s, %s, %s)"
-        values = (fullname, phone_number, str(response))
+        query = "INSERT INTO testresults (fullname, phone_number, answers, test_date) VALUES (%s, %s, %s, %s)"
+        values = (fullname, phone_number, answers, test_date)
 
         cursor.execute(query, values)
 
@@ -109,10 +121,17 @@ def question_2(message):
             bot.send_message(message.chat.id, "Ваш уровень тревожности находится в пределах нормы.")
     except ValueError:
         bot.send_message(message.chat.id, "Пожалуйста, введите числа от 1 до 5.")
+        bot.register_next_step_handler(message, question_2)
+
+
+# Создаем глобальный словарь для хранения ответов пользователя
+user_data = {}
 
 # Обработчик команды для прохождения нового теста
 @bot.message_handler(commands=['test-2'])
 def start_yesno_test(message):
+    # Создаем словарь для данного пользователя
+    user_data[message.from_user.id] = {}
     bot.reply_to(message, "Давайте пройдем новый тест. Пожалуйста, ответьте 'да' или 'нет' на следующие вопросы.")
     bot.send_message(message.chat.id, "1. Вопрос 1?")
     bot.register_next_step_handler(message, yesno_question_2)
@@ -123,83 +142,41 @@ def yesno_question_2(message):
         if response not in ['да', 'нет']:
             raise ValueError
 
-        # Connect to the database
-        db = mysql.connector.connect(
-            host="localhost",
-            user="kot04ka",
-            password="1111",
-            database="users"
-        )
-        cursor = db.cursor()
-
-        # Get the user's fullname and phone_number from the database
-        user_id = message.from_user.id
-        cursor.execute("SELECT fullname, phone FROM users WHERE user_id = %s", (user_id,))
-        user = cursor.fetchone()
-        if user is not None:
-            fullname, phone_number = user
-        else:
-            fullname, phone_number = "Unknown", "Unknown"
-
-        # Insert the data into the test2results table
-        query = "INSERT INTO test2results (fullname, phone_number, answers) VALUES (%s, %s, %s)"
-        values = (fullname, phone_number, response)
-
-        cursor.execute(query, values)
-
-        # Commit the transaction
-        db.commit()
+        # Сохраняем ответ пользователя
+        user_data[message.from_user.id]['Вопрос 1'] = response
 
         # Continue with the next question
         bot.send_message(message.chat.id, "2. Вопрос 2?")
         bot.register_next_step_handler(message, yesno_question_3)
     except ValueError:
         bot.send_message(message.chat.id, "Пожалуйста, ответьте 'да' или 'нет'.")
+        bot.register_next_step_handler(message, yesno_question_2)
 
+# Аналогично для остальных вопросов...
 def yesno_question_3(message):
     try:
         response = message.text.lower()
         if response not in ['да', 'нет']:
             raise ValueError
 
-        # Connect to the database
-        db = mysql.connector.connect(
-            host="localhost",
-            user="kot04ka",
-            password="1111",
-            database="users"
-        )
-        cursor = db.cursor()
-
-        # Get the user's fullname and phone_number from the database
-        user_id = message.from_user.id
-        cursor.execute("SELECT fullname, phone FROM users WHERE user_id = %s", (user_id,))
-        user = cursor.fetchone()
-        if user is not None:
-            fullname, phone_number = user
-        else:
-            fullname, phone_number = "Unknown", "Unknown"
-
-        # Insert the data into the test2results table
-        query = "INSERT INTO test2results (fullname, phone_number, answers) VALUES (%s, %s, %s)"
-        values = (fullname, phone_number, response)
-
-        cursor.execute(query, values)
-
-        # Commit the transaction
-        db.commit()
+        # Сохраняем ответ пользователя
+        user_data[message.from_user.id]['Вопрос 2'] = response
 
         # Continue with the next question
         bot.send_message(message.chat.id, "3. Вопрос 3?")
         bot.register_next_step_handler(message, yesno_question_4)
     except ValueError:
         bot.send_message(message.chat.id, "Пожалуйста, ответьте 'да' или 'нет'.")
-
+        bot.register_next_step_handler(message, yesno_question_3)
+        
 def yesno_question_4(message):
     try:
         response = message.text.lower()
         if response not in ['да', 'нет']:
             raise ValueError
+
+        # Сохраняем ответ пользователя
+        user_data[message.from_user.id]['Вопрос 3'] = response
 
         # Connect to the database
         db = mysql.connector.connect(
@@ -219,9 +196,15 @@ def yesno_question_4(message):
         else:
             fullname, phone_number = "Unknown", "Unknown"
 
+        # Преобразуем словарь с ответами пользователя в строку
+        answers = str(user_data[message.from_user.id])
+
+        # Получаем текущую дату и время
+        test_date = datetime.now()
+
         # Insert the data into the test2results table
-        query = "INSERT INTO test2results (fullname, phone_number, answers) VALUES (%s, %s, %s)"
-        values = (fullname, phone_number, response)
+        query = "INSERT INTO test2results (fullname, phone_number, answers, test_date) VALUES (%s, %s, %s, %s)"
+        values = (fullname, phone_number, answers, test_date)
 
         cursor.execute(query, values)
 
@@ -232,6 +215,7 @@ def yesno_question_4(message):
         bot.send_message(message.chat.id, "Спасибо за прохождение теста!")
     except ValueError:
         bot.send_message(message.chat.id, "Пожалуйста, ответьте 'да' или 'нет'.")
+        bot.register_next_step_handler(message, yesno_question_4)
 
 
 
@@ -284,7 +268,7 @@ def handle_remind(message):
     # Извлекаем текст напоминания, дату и время, и интервал из команды
     text = ' '.join(parts[1:-3])
     datetime_str = ' '.join(parts[-3:-1])
-    interval = parts[-1]
+    interval = parts[-1]-9
 
     # Устанавливаем напоминание
     set_reminder(chat_id, text, datetime_str, interval)
@@ -319,6 +303,8 @@ def handle_sleep_tip(message):
 
 
 
+
+
 # Обработчик для других сообщений
 @bot.message_handler(func=lambda message: True)
 def echo_all(message):
@@ -336,6 +322,8 @@ def send_help(message):
     /help - Получить информацию о командах бота
     """
     bot.reply_to(message, help_text)
+
+
 
 def run_schedule():
     while True:
