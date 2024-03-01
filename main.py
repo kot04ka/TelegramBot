@@ -14,7 +14,7 @@ from advice_lists import advice_start, advice_action, advice_end
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 # Токен бота 
-bot = telebot.TeleBot('6166430773:AAHqpvwfB2eY7nJXUa4EdZ8kNDkr9zFrP8I')
+bot = telebot.TeleBot('6166430773:AAGUFrcEN1Mkx4QYMU7Xx8fPwHUU0Sga3do')
 
 
 # Подключение к базе данных MySQL
@@ -29,6 +29,10 @@ cursor = db.cursor()
 
 #================================Базовые Функции========================================
 #================================Базовые Функции========================================
+def start_test(message):
+    print("Start test function called")
+    bot.reply_to(message,"Выберете тест который вы хотите пройти ")
+    
 
 # Обработчик команды /start
 @bot.message_handler(commands=['start'])
@@ -74,11 +78,7 @@ def save_phone(message):
     # После сохранения номера телефона пользователя, благодарим его
     bot.send_message(message.chat.id, "Спасибо! Ваш номер телефона сохранен." if phone != '#' else "Спасибо! Выбор без указания номера телефона сохранен.")
 
-# Обработчик для других сообщений
-@bot.message_handler(func=lambda message: True)
-def echo_all(message):
-    # Если бот не понял сообщение пользователя, он просит пользователя ввести команду /help
-    bot.reply_to(message, "Извините, я не понял вашего сообщения. Если вам нужна помощь, введите /help.")
+
 
 # Обработчик команды для отображения информации о помощи
 @bot.message_handler(commands=['help'])
@@ -398,8 +398,16 @@ def run_schedule():
 # Запуск цикла в отдельном потоке
 schedule_thread = threading.Thread(target=run_schedule)
 schedule_thread.start()
+
+# Обработчик для других сообщений
+@bot.message_handler(func=lambda message: True)
+def echo_all(message):
+    # Если бот не понял сообщение пользователя, он просит пользователя ввести команду /help
+    bot.reply_to(message, "Извините, я не понял вашего сообщения. Если вам нужна помощь, введите /help.")
+    
 # Запуск бота
 bot.polling()
+
 #================================ Функция для запуска бота ========================================
 #================================ Функция для запуска бота ========================================
 
