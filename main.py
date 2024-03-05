@@ -85,6 +85,9 @@ def save_phone(message):
 #================================ Конец Базовым Функциям ========================================
     
 
+# Создаем внешний словарь для хранения информации о активном тесте пользователями
+active_tests = {}
+
 # Обработчик команды /help
 @bot.message_handler(commands=['help'])
 def send_help(message):
@@ -102,6 +105,11 @@ def send_help(message):
 # Обработчик нажатий на кнопки
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
+    # Проверяем, есть ли у пользователя активный тест
+    if call.message.chat.id in active_tests:
+        bot.answer_callback_query(call.id, "У вас уже есть активный тест.")
+        return
+
     # Запускаем соответствующий тест в зависимости от выбора пользователя
     if call.data == 'tests':
         send_tests(call.message)
@@ -111,8 +119,11 @@ def callback_query(call):
         bot.send_message(call.message.chat.id, 'Введите данные для напоминания в формате: /remind [текст напоминания] [дата и время] [интервал]')
     elif call.data == 'test-1':
         start_anxiety_test(call.message)
+        active_tests[call.message.chat.id] = 'test-1'
+        
     elif call.data == 'test-2':
         start_yesno_test(call.message)
+        active_tests[call.message.chat.id] = 'test-2'
 #================================ Конец Базовым Функциям ========================================
 #================================ Конец Базовым Функциям ========================================
 
@@ -189,6 +200,7 @@ def question_2(message):
             bot.send_message(message.chat.id, "Ваш уровень тревожности высокий. Рекомендуется обратиться к специалисту.")
         else:
             bot.send_message(message.chat.id, "Ваш уровень тревожности находится в пределах нормы.")
+        del active_tests[message.chat.id]
     except ValueError:
         bot.send_message(message.chat.id, "Пожалуйста, введите числа от 1 до 5.")
         bot.register_next_step_handler(message, question_2)
@@ -286,6 +298,7 @@ def yesno_question_4(message):
 
         # Завершаем тест
         bot.send_message(message.chat.id, "Спасибо за прохождение теста!")
+        del active_tests[message.chat.id]
     except ValueError:
         bot.send_message(message.chat.id, "Пожалуйста, ответьте 'да' или 'нет'.")
         bot.register_next_step_handler(message, yesno_question_4)
