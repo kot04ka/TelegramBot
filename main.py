@@ -12,7 +12,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import random
 from advice_lists import advice_start, advice_action, advice_end
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-
+from datetime import datetime
 # Токен бота 
 bot = telebot.TeleBot('6166430773:AAGUFrcEN1Mkx4QYMU7Xx8fPwHUU0Sga3do')
 
@@ -81,6 +81,7 @@ def save_phone(message):
 
 
 
+#================================ Конец Базовым Функциям ========================================
 #================================ Конец Базовым Функциям ========================================
     
 
@@ -385,11 +386,46 @@ def handle_sleep_tip(message):
 #================================  Дневник настроения========================================
 #================================ Дневник настроения ========================================
 
+# Создание подключение к базе данных
+db = mysql.connector.connect(
+    host="localhost",
+    user="kot04ka",
+    password="1111",
+    database="users"
+)
 
 
+# Создание курсора для выполнения запросов в БД
+cursor = db.cursor()
 
+# Обработчик команды /mood
+@bot.message_handler(commands=['mood'])
+def mood(message):
+    # Отправление пользователю сообщения с просьбой ввести свое настроение
+    msg = bot.send_message(message.chat.id, "Введите ваше настроение")
+    # Регистрируем следующий шаг
+    bot.register_next_step_handler(msg, save_mood)
 
-
+# Функция для сохранения настроения пользователя в базе данных
+def save_mood(message):
+    # Получаем настроение пользователя
+    mood = message.text
+    # Получаем id пользователя
+    user_id = message.from_user.id
+    # Получаем полное имя пользователя
+    full_name = message.from_user.full_name
+    # Получаем текущую дату
+    date = datetime.now()
+    # Вставляем данные пользователя в базу данных
+    sql = "INSERT INTO mood (user_id, FullName, date, mood) VALUES (%s, %s, %s, %s)"
+    val = (user_id, full_name, date, mood)
+    # Выполняем запрос
+    cursor.execute("ALTER TABLE mood ALTER COLUMN ID SET DEFAULT 0;")
+    # Выполняем запрос с параметрами и сохраняем изменения
+    cursor.execute(sql, val)
+    db.commit()
+    # Отправляем сообщение пользователю с подтверждением сохранения настроения
+    bot.send_message(message.chat.id, "Ваше настроение сохранено")
 
 
 #================================ Дневник настроения========================================
