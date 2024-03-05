@@ -96,11 +96,16 @@ def send_help(message):
     tests_button = types.InlineKeyboardButton('Посмотреть все тесты', callback_data='tests')
     sleep_button = types.InlineKeyboardButton('Получить совет по сну', callback_data='sleep_tip')
     remind_button = types.InlineKeyboardButton('Установить напоминание', callback_data='remind')
+    mood_button = types.InlineKeyboardButton('Записать настроение', callback_data='mood')
+    get_mood_button = types.InlineKeyboardButton('Посмотреть настроение', callback_data='get_mood')
+    # Добавляем кнопки в разметку
     markup.add(tests_button)
     markup.add(sleep_button)
     markup.add(remind_button)
+    markup.add(mood_button)
+    markup.add(get_mood_button)
     # Отправляем сообщение с кнопками
-    bot.send_message(message.chat.id, "То что я умею:", reply_markup=markup)
+    bot.send_message(message.chat.id, "все команды которые я знаю:", reply_markup=markup)
 
 # Обработчик нажатий на кнопки
 @bot.callback_query_handler(func=lambda call: True)
@@ -111,19 +116,34 @@ def callback_query(call):
         return
 
     # Запускаем соответствующий тест в зависимости от выбора пользователя
+
     if call.data == 'tests':
         send_tests(call.message)
+    
     elif call.data == 'sleep_tip':
         handle_sleep_tip(call.message)
+
     elif call.data == 'remind':
         bot.send_message(call.message.chat.id, 'Введите данные для напоминания в формате: /remind [текст напоминания] [дата и время] [интервал]')
+
     elif call.data == 'test-1':
         start_anxiety_test(call.message)
         active_tests[call.message.chat.id] = 'test-1'
-        
+
     elif call.data == 'test-2':
         start_yesno_test(call.message)
         active_tests[call.message.chat.id] = 'test-2'
+        
+    elif call.data == 'mood':
+        mood(call.message)
+
+    elif call.data == 'get_mood':
+        get_mood(call.message)
+
+
+
+
+
 #================================ Конец Базовым Функциям ========================================
 #================================ Конец Базовым Функциям ========================================
 
@@ -425,21 +445,71 @@ def save_mood(message):
     mood = message.text
     # Получаем id пользователя
     user_id = message.from_user.id
-    # Получаем полное имя пользователя
-    full_name = message.from_user.full_name
+
+    # Запрашиваем ФИО пользователя из таблицы users
+    sql = "SELECT fullname FROM users WHERE user_id = %s"
+    val = (user_id,)
+    cursor.execute(sql, val)
+    result = cursor.fetchone()
+    if result is None:
+        bot.send_message(message.chat.id, "Пользователь не найден")
+        return
+    fullname = result[0]
+
     # Получаем текущую дату
     date = datetime.now()
+
     # Вставляем данные пользователя в базу данных
     sql = "INSERT INTO mood (user_id, FullName, date, mood) VALUES (%s, %s, %s, %s)"
-    val = (user_id, full_name, date, mood)
+    val = (user_id, fullname, date, mood)
+
     # Выполняем запрос
     cursor.execute("ALTER TABLE mood ALTER COLUMN ID SET DEFAULT 0;")
     # Выполняем запрос с параметрами и сохраняем изменения
     cursor.execute(sql, val)
     db.commit()
+
     # Отправляем сообщение пользователю с подтверждением сохранения настроения
     bot.send_message(message.chat.id, "Ваше настроение сохранено")
 
+
+
+
+# Обработчик команды /get_mood
+@bot.message_handler(commands=['get_mood'])
+def get_mood(message):
+    msg = bot.reply_to(message, "Введите дату в формате YYYY-MM-DD:")
+    bot.register_next_step_handler(msg, process_date_input)
+
+def process_date_input(message):
+    # Получаем id пользователя
+    user_id = message.from_user.id
+    # Получаем дату от пользователя
+    date = message.text
+
+    # Запрашиваем ФИО пользователя из таблицы users
+    sql = "SELECT fullname FROM users WHERE user_id = %s"
+    val = (user_id,)
+    cursor.execute(sql, val)
+    result = cursor.fetchone()
+    if result is None:
+        bot.send_message(message.chat.id, "Пользователь не найден")
+        return
+    fullname = result[0]
+
+    # Запрашиваем все настроения пользователя на указанную дату
+    sql = "SELECT Mood FROM mood WHERE user_id = %s AND DATE(Date) = %s"
+    val = (user_id, date)
+    cursor.execute(sql, val)
+    moods = cursor.fetchall()
+
+    # Отправляем настроения пользователю
+    if moods:
+        bot.send_message(message.chat.id, f"{fullname}, ваши настроения на {date}:")
+        for mood in moods:
+            bot.send_message(message.chat.id, mood[0])
+    else:
+        bot.send_message(message.chat.id, f"{fullname}, на указанную дату настроения не найдены")
 
 #================================ Дневник настроения========================================
 #================================  Дневник настроения========================================
