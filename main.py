@@ -62,7 +62,7 @@ def save_fullname(message):
     # После сохранения ФИО пользователя, просим его ввести номер телефона
     bot.send_message(message.chat.id, f"Спасибо, {fullname}! Теперь введите ваш номер телефона или напишите 'нет', если не хотите указывать:")
     bot.register_next_step_handler(message, save_phone)
-
+    
 # Функция для сохранения номера телефона пользователя в базе данных
 def save_phone(message):
     user_id = message.from_user.id
@@ -77,22 +77,41 @@ def save_phone(message):
     db.commit()
     # После сохранения номера телефона пользователя, благодарим его
     bot.send_message(message.chat.id, "Спасибо! Ваш номер телефона сохранен." if phone != '#' else "Спасибо! Выбор без указания номера телефона сохранен.")
+    bot.send_message(message.chat.id, "Благодарим за регистрацию! Чтобы узнать доступные команды, напишите /help.")
 
 
 
-# Обработчик команды для отображения информации о помощи
+#================================ Конец Базовым Функциям ========================================
+    
+
+# Обработчик команды /help
 @bot.message_handler(commands=['help'])
 def send_help(message):
-    # Отправляем пользователю информацию о доступных командах
-    help_text = """
-    Добро пожаловать
-    Вы можете использовать следующие команды:
-    /start - Начать взаимодействие с психологом
-    /tests - Посмотреть все тесты :
-    """
-    bot.reply_to(message, help_text)
+    # Создаем кнопки для выбора действия
+    markup = types.InlineKeyboardMarkup()
+    tests_button = types.InlineKeyboardButton('Посмотреть все тесты', callback_data='tests')
+    sleep_button = types.InlineKeyboardButton('Получить совет по сну', callback_data='sleep_tip')
+    remind_button = types.InlineKeyboardButton('Установить напоминание', callback_data='remind')
+    markup.add(tests_button)
+    markup.add(sleep_button)
+    markup.add(remind_button)
+    # Отправляем сообщение с кнопками
+    bot.send_message(message.chat.id, "То что я умею:", reply_markup=markup)
 
-
+# Обработчик нажатий на кнопки
+@bot.callback_query_handler(func=lambda call: True)
+def callback_query(call):
+    # Запускаем соответствующий тест в зависимости от выбора пользователя
+    if call.data == 'tests':
+        send_tests(call.message)
+    elif call.data == 'sleep_tip':
+        handle_sleep_tip(call.message)
+    elif call.data == 'remind':
+        bot.send_message(call.message.chat.id, 'Введите данные для напоминания в формате: /remind [текст напоминания] [дата и время] [интервал]')
+    elif call.data == 'test-1':
+        start_anxiety_test(call.message)
+    elif call.data == 'test-2':
+        start_yesno_test(call.message)
 #================================ Конец Базовым Функциям ========================================
 #================================ Конец Базовым Функциям ========================================
 
@@ -327,7 +346,13 @@ def handle_remind(message):
     # Извлекаем текст напоминания, дату и время, и интервал из команды
     text = ' '.join(parts[1:-3])
     datetime_str = ' '.join(parts[-3:-1])
-    interval = parts[-1]-9
+    
+    # Преобразуем интервал в число
+    try:
+        interval = int(parts[-1])
+    except ValueError:
+        bot.reply_to(message, 'Интервал должен быть числом.')
+        return
 
     # Устанавливаем напоминание
     set_reminder(chat_id, text, datetime_str, interval)
@@ -357,8 +382,21 @@ def handle_sleep_tip(message):
 #================================ Конец Функция Советы по сну ========================================
 
 
-#================================ Обработка всех кнопок ========================================
-#================================ Обработка всех кнопок ========================================
+#================================  Дневник настроения========================================
+#================================ Дневник настроения ========================================
+
+
+
+
+
+
+
+
+#================================ Дневник настроения========================================
+#================================  Дневник настроения========================================
+
+#================================  ========================================
+#================================ ========================================
 # Обработчик команды /tests
 @bot.message_handler(commands=['tests'])
 def send_tests(message):
@@ -369,7 +407,6 @@ def send_tests(message):
     markup.add(test1_button, test2_button)
     # Отправляем сообщение с кнопками
     bot.send_message(message.chat.id, "Выберите тест:", reply_markup=markup)
-
 # Обработчик нажатий на кнопки
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
@@ -378,7 +415,7 @@ def callback_query(call):
         start_anxiety_test(call.message)
     elif call.data == 'test-2':
         start_yesno_test(call.message)
-
+        
 #================================ конец Обработoк всех кнопок ========================================
 #================================ конец Обработoк всех кнопок ===================================
 
@@ -386,8 +423,7 @@ def callback_query(call):
 
 #================================ Функция для запуска бота ========================================
 #================================ Функция для запуска бота ========================================
-        
-        
+
 # Функция для запуска планировщика заданий
 def run_schedule():
     while True:
@@ -404,7 +440,7 @@ schedule_thread.start()
 def echo_all(message):
     # Если бот не понял сообщение пользователя, он просит пользователя ввести команду /help
     bot.reply_to(message, "Извините, я не понял вашего сообщения. Если вам нужна помощь, введите /help.")
-    
+
 # Запуск бота
 bot.polling()
 
