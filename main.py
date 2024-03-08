@@ -13,6 +13,8 @@ import random
 from advice_lists import advice_start, advice_action, advice_end
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from datetime import datetime
+from exercises import exercises
+from self_care_tips import self_care_tips
 # Токен бота 
 bot = telebot.TeleBot('6166430773:AAGUFrcEN1Mkx4QYMU7Xx8fPwHUU0Sga3do')
 
@@ -98,12 +100,18 @@ def send_help(message):
     remind_button = types.InlineKeyboardButton('Установить напоминание', callback_data='remind')
     mood_button = types.InlineKeyboardButton('Записать настроение', callback_data='mood')
     get_mood_button = types.InlineKeyboardButton('Посмотреть настроение', callback_data='get_mood')
+    meditate_button = types.InlineKeyboardButton('Упражнение для расслабления', callback_data='meditate')
+    appointment_button = types.InlineKeyboardButton('Записаться на прием', callback_data='appointment')
+    self_care_button = types.InlineKeyboardButton('Получить совет по самоуходу', callback_data='selfcare')
     # Добавляем кнопки в разметку
+    markup.add(appointment_button)
     markup.add(tests_button)
     markup.add(sleep_button)
     markup.add(remind_button)
-    markup.add(mood_button)
+    markup.add(mood_button) 
+    markup.add(meditate_button)
     markup.add(get_mood_button)
+    markup.add(self_care_button)
     # Отправляем сообщение с кнопками
     bot.send_message(message.chat.id, "все команды которые я знаю:", reply_markup=markup)
 
@@ -140,6 +148,13 @@ def callback_query(call):
     elif call.data == 'get_mood':
         get_mood(call.message)
 
+    elif call.data == 'meditate':
+        meditate(call.message)
+
+    elif call.data == 'appointment':
+        appointment(call.message)
+    elif call.data == 'selfcare':
+        send_self_care_tip(call.message)
 
 
 
@@ -147,6 +162,54 @@ def callback_query(call):
 #================================ Конец Базовым Функциям ========================================
 #================================ Конец Базовым Функциям ========================================
 
+#================================ Функция для контактов ========================================
+#================================ Функция для контактов ========================================
+
+# Обработчик команды /appointment
+@bot.message_handler(commands=['appointment'])
+def appointment(message):
+    msg = bot.reply_to(message, "Введите дату и время записи в формате YYYY-MM-DD HH:MM:")
+    bot.register_next_step_handler(msg, process_appointment)
+
+def process_appointment(message):
+    try:
+        # Получаем id пользователя
+        user_id = message.from_user.id
+        # Получаем дату и время записи от пользователя
+        appointment_datetime = message.text
+
+        # Получаем полное имя пользователя из таблицы users
+        sql = "SELECT fullname FROM users WHERE user_id = %s"
+        val = (user_id,)
+        cursor.execute(sql, val)
+        result = cursor.fetchone()
+        if result is None:
+            bot.send_message(message.chat.id, "Пользователь не найден в базе данных.")
+            return
+        fullname = result[0]
+
+        # Проверяем, есть ли уже запись на это время
+        sql = "SELECT * FROM appointments WHERE appointment_datetime = %s"
+        val = (appointment_datetime,)
+        cursor.execute(sql, val)
+        result = cursor.fetchone()
+        if result is not None:
+            msg = bot.send_message(message.chat.id, "Это время уже занято. Попробуйте позвонить нам по номеру +380 98 74 283 11 или введите другое время. Примерное время сеанса: 1 час.")
+            bot.register_next_step_handler(msg, process_appointment)
+            return
+
+        # Вставляем запись на прием в таблицу appointments
+        sql = "INSERT INTO appointments (user_id, fullname, appointment_datetime) VALUES (%s, %s, %s)"
+        val = (user_id, fullname, appointment_datetime)
+        cursor.execute(sql, val)
+        db.commit()
+        bot.reply_to(message, "Ваша запись на прием успешно зарегистрирована!")
+    except Exception as e:
+        bot.reply_to(message, "Произошла ошибка при обработке вашего запроса.")
+        print(e)
+
+#================================ Конец Функция для контактов ========================================
+#================================ Конец Функция для контактов ========================================
 
 
 
@@ -327,6 +390,43 @@ def yesno_question_4(message):
 
 #================================ Конец Тестирование ========================================
 #================================ Конец Тестирование ========================================
+
+#================================ самоуход ========================================
+#================================ самоуход ========================================
+
+# Функция для отправки совета по самоуходу
+def send_self_care_tip(message):
+    # Выбираем случайный совет из списка
+    tip = random.choice(self_care_tips)
+    # Отправляем совет пользователю
+    bot.send_message(message.chat.id, tip)
+
+# Обработчик команды /selfcare
+@bot.message_handler(commands=['selfcare'])
+def selfcare(message):
+    send_self_care_tip(message)
+
+#================================ конец самоуход ========================================
+#================================ конец самоуход ========================================
+
+
+#================================ упражнение для расслабления ========================================
+#================================ упражнение для расслабления ========================================
+
+# Обработчик команды /meditate
+@bot.message_handler(commands=['meditate'])
+def meditate(message):
+    # Выбираем случайное упражнение для расслабления
+    exercise = random.choice(exercises)
+    # Удаляем выбранное упражнение из списка, чтобы оно не повторялось
+    exercises.remove(exercise)
+    # Отправляем выбранное упражнение пользователю
+    bot.reply_to(message, exercise)
+
+#================================ конец упражнение для расслабления ========================================
+#================================ конец упражнение для расслабления ========================================
+
+
 
 
 #================================ Трекер напоминаний ========================================
@@ -538,7 +638,7 @@ def callback_query(call):
 #================================ конец Обработoк всех кнопок ========================================
 #================================ конец Обработoк всех кнопок ===================================
 
-cl
+
 
 #================================ Функция для запуска бота ========================================
 #================================ Функция для запуска бота ========================================
