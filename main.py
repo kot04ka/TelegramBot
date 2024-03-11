@@ -46,13 +46,12 @@ def send_welcome(message):
     # Если пользователь найден в базе данных, приветствуем его по имени
     if user is not None:
         bot.reply_to(message, f"Привет, {user[0]}! Чем я могу помочь вам сегодня?")
-    # Если пользователь не найден в базе данных, приветствуем его и просим ввести ФИО
+    # Если пользователь не найден в базе данных, приветствуем его и просим ввести имя или никнейм
     else:
-        bot.reply_to(message, "Привет! Я ваш виртуальный психолог. Чем я могу помочь вам сегодня?")
-        bot.send_message(message.chat.id, "Пожалуйста, введите ваше ФИО:")
-        bot.register_next_step_handler(message, save_fullname)
+        msg = bot.reply_to(message, "Привет! Я ваш виртуальный психолог. Как мне к вам обращаться?")
+        bot.register_next_step_handler(msg, save_fullname)
 
-# Функция для сохранения ФИО пользователя в базе данных
+# Функция для сохранения имени пользователя в базе данных
 def save_fullname(message):
     user_id = message.from_user.id
     fullname = message.text
@@ -61,9 +60,9 @@ def save_fullname(message):
     val = (user_id, fullname)
     cursor.execute(sql, val)
     db.commit()
-    # После сохранения ФИО пользователя, просим его ввести номер телефона
-    bot.send_message(message.chat.id, f"Спасибо, {fullname}! Теперь введите ваш номер телефона или напишите 'нет', если не хотите указывать:")
-    bot.register_next_step_handler(message, save_phone)
+    # После сохранения имени пользователя, просим его ввести номер телефона
+    msg = bot.send_message(message.chat.id, f"Спасибо, {fullname}! Теперь введите ваш номер телефона или напишите 'нет', если не хотите указывать:")
+    bot.register_next_step_handler(msg, save_phone)
     
 # Функция для сохранения номера телефона пользователя в базе данных
 def save_phone(message):
